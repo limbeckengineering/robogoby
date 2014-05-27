@@ -6,15 +6,27 @@ import socket
 import multiprocessing
 import os
 import select
+import RPi.GPIO as GPIO
 
+def led(dutyDwn, dutyStr, signal):
+	if signal==1:
+		GPIO.setmodea(GPIO.BOARD)
+		GPIO.setup(config.ledDwn, GPIO.OUT)
+		GPIO.setup(config.ledStr, GPIO.OUT)
+		ledD = GPIO.PWM(config.ledDwn, 60)
+		ledS = GPIO.PWM(config.ledStr, 60)
+		ledD.start(0)
+		leds.start(0)
+	else:
+		ledD.ChangeDutyCycle(dutyDwn)
+		ledS.ChangeDutyCycle(dutyStr)
 
 def read(data):
 	print "starting parse"
 	values = { } 
-	#args = dict(item.split(":") for item in data.split(";"))
 	dat = data.split(";")
 	print dat
-	for i in range(0,7):
+	for i in range(0,len(dat)):
 		values[i]=dat[i].split(":")
 	H1 = "sudo echo " + str(config.H1motor) + "=" + values[2][1] + " > /dev/servoblaster"
 	print H1
@@ -26,17 +38,14 @@ def read(data):
 	print V2
 	F = "sudo echo " + str(config.Fmotor) + "=" + values[4][1] + " > /dev/servoblaster"
 	print F
-	led1 = "sudo echo " + str(config.ledDwn) + "=" + values[5][1] + " > /dev/servoblaster"
-	print led1
-	led2 = "sudo echo " + str(config.ledStr) + "=" + values[6][1] + " > /dev/servoblaster"
-	print led2
 	os.system(H1)
 	os.system(H2)
 	os.system(V1)
 	os.system(V2)
 	os.system(F)
-	os.system(led1)
-	os.system(led2)
+	leds = multiprocessing.Process(name="LEDS", target=led, args=(values[5][1], values[6][1], 0))
+	led.start()
+	led.terminate()
 	print "all data sent"
 
 
@@ -72,6 +81,7 @@ class RaspServer1:
 				else:
 					try:
 						data = sock.recv(config.RECV_BUFFER)
+						led(50, 50, 1)
 						read(data)
 
 					except:
